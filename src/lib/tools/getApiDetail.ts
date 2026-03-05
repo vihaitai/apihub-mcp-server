@@ -7,18 +7,32 @@ export function registerGetApiDetailTool(server: McpServer, store: SwaggerStore)
   server.registerTool(
     "get_api_detail",
     {
-      description: `Get detailed API definition by operationId or method/path.
+      description: `获取指定 API 的完整定义详情，包括参数结构、请求体和响应体的完整 schema 信息。
 
-Input Schema (provide either operationId OR method+path):
-- operationId (string, optional): The unique identifier of the API operation. Preferred way to get API details.
-- method (enum, optional): HTTP method. Allowed values: GET, POST, PUT, PATCH, DELETE. Required if operationId is not provided.
-- path (string, optional): API path (e.g., '/api/users'). Required if operationId is not provided.
-- project (string, optional): Filter by project name (e.g., 'AI客服系统API'). Get available projects from list_api response.
+【功能边界】
+✅ 能做什么：
+- 根据 operationId 精确查找 API 详情
+- 根据 method + path 组合查找 API 详情  
+- 返回完整的参数定义，包括类型、描述、枚举等详细信息
+- 支持按项目过滤查找
 
-Usage Tips:
-1. Use 'operationId' for precise lookup when you know the exact operation identifier.
-2. Use 'method' + 'path' when operationId is unknown.
-3. Specify 'project' to narrow down the search scope and improve performance.`,
+❌ 不能做什么：
+- 不能模糊搜索 API（请使用 search_apis 工具）
+- 不能分页浏览 API 列表（请使用 list_api 工具）
+- 不能返回 API 调用示例或代码片段
+- 当找不到匹配的 API 时会返回错误
+
+【触发场景】
+当用户说以下任一情况时，请使用此工具：
+- "查看某个具体 API 的详细参数定义"
+- "我想了解 [API名称] 的请求和响应格式"
+- "获取 [operationId] 的完整接口文档"
+- "需要知道某个接口的具体参数要求"
+
+【使用建议】
+- 优先使用 operationId 进行精确查找
+- 如果不知道 operationId，可以使用 method + path 组合
+- 可以指定 project 参数缩小搜索范围，提高效率`,
       inputSchema: GetApiDetailInputSchema.shape
     },
     async (args) => {

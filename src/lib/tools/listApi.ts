@@ -7,19 +7,34 @@ export function registerListApiTool(server: McpServer, store: SwaggerStore): voi
   server.registerTool(
     "list_api",
     {
-      description: `List API summaries with pagination and optional filters.
+      description: `分页列出 API 概览信息，支持按项目、标签、HTTP 方法等条件过滤。
 
-Input Schema:
-- project (string, optional): Filter by project name (e.g., 'AI客服系统API'). Get available projects from the 'projects' field in response.
-- page (number, optional): Page number, starts from 1, default is 1.
-- pageSize (number, optional): Items per page, range 1-200, default is 50.
-- tag (string, optional): Filter by API tag.
-- method (enum, optional): Filter by HTTP method. Allowed values: GET, POST, PUT, PATCH, DELETE.
+【功能边界】
+✅ 能做什么：
+- 分页浏览所有可用的 API 列表
+- 按项目名称过滤 API
+- 按标签（tag）过滤 API
+- 按 HTTP 方法（GET/POST/PUT/PATCH/DELETE）过滤 API
+- 获取项目列表和基本信息
 
-Usage Tips:
-1. First call without 'project' to get all available projects from the response.
-2. Then call with specific 'project' to list APIs within that project.
-3. Use 'tag' or 'method' to further filter results.`,
+❌ 不能做什么：
+- 不能查看 API 的详细参数定义（请使用 get_api_detail 工具）
+- 不能进行关键字搜索（请使用 search_apis 工具）
+- 不能获取完整的请求/响应体结构
+- pageSize 最大限制为 200
+
+【触发场景】
+当用户说以下任一情况时，请使用此工具：
+- "列出所有的 API 接口"
+- "浏览 API 列表，每页显示 [数量]"
+- "查看 [项目名] 下有哪些 API"
+- "筛选出所有 GET/POST 方法的接口"
+- "按标签 [tag] 查看相关 API"
+
+【使用建议】
+- 首次调用建议不带 project 参数，获取所有项目列表
+- 然后指定具体 project 查看该项目下的 API
+- 可结合 tag 或 method 参数进一步筛选`,
       inputSchema: ListApiInputSchema.shape
     },
     async (args) => {
