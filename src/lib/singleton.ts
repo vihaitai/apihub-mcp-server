@@ -26,9 +26,7 @@ export async function getSwaggerStore(): Promise<SwaggerStore> {
   globalForApp.__swaggerStorePromise = (async () => {
     const env = loadEnv();
     const store = new SwaggerStore({
-      swaggerUrl: env.SWAGGER_URL,
-      refreshIntervalMs: env.SWAGGER_REFRESH_INTERVAL_MS,
-      requestTimeoutMs: env.SWAGGER_REQUEST_TIMEOUT_MS
+      refreshIntervalMs: env.SWAGGER_REFRESH_INTERVAL_MS
     });
     await store.init();
     globalForApp.__swaggerStore = store;

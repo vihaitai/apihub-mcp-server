@@ -31,10 +31,11 @@ const spec = {
 
 describe("indexSwagger", () => {
   it("flattens paths to api details", () => {
-    const details = indexSwagger(spec);
+    const details = indexSwagger(spec, "test-project");
     expect(details).toHaveLength(2);
     expect(details[0]?.operationId).toBe("listUsers");
     expect(details[0]?.method).toBe("GET");
+    expect(details[0]?.project).toBe("test-project");
   });
 
   it("generates stable hash", () => {

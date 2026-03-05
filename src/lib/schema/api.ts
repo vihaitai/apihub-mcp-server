@@ -28,7 +28,8 @@ export const ApiSummarySchema = z.object({
   path: z.string(),
   summary: z.string().optional(),
   description: z.string().optional(),
-  tags: z.array(z.string()).default([])
+  tags: z.array(z.string()).default([]),
+  project: z.string()
 });
 
 export const ApiDetailSchema = ApiSummarySchema.extend({
@@ -47,7 +48,8 @@ export const ListApiInputSchema = z.object({
   page: z.number().int().positive().default(1),
   pageSize: z.number().int().positive().max(200).default(50),
   tag: z.string().min(1).optional(),
-  method: HttpMethodSchema.optional()
+  method: HttpMethodSchema.optional(),
+  project: z.string().min(1).optional()
 });
 
 export const ListApiOutputSchema = BaseMetadataSchema.extend({
@@ -61,6 +63,7 @@ export const SearchApisInputSchema = z.object({
   query: z.string().min(1).optional(),
   tag: z.string().min(1).optional(),
   method: HttpMethodSchema.optional(),
+  project: z.string().min(1).optional(),
   limit: z.number().int().positive().max(100).default(20)
 });
 
@@ -73,7 +76,8 @@ export const GetApiDetailInputSchema = z
   .object({
     operationId: z.string().min(1).optional(),
     method: HttpMethodSchema.optional(),
-    path: z.string().min(1).optional()
+    path: z.string().min(1).optional(),
+    project: z.string().min(1).optional()
   })
   .refine(
     (value) => Boolean(value.operationId) || (Boolean(value.method) && Boolean(value.path)),

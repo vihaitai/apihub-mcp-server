@@ -2,19 +2,21 @@ import { describe, expect, it } from "vitest";
 import { loadEnv } from "../src/lib/config/env";
 
 describe("loadEnv", () => {
-  it("loads required and optional envs", () => {
+  it("loads refresh interval with default value", () => {
     const env = loadEnv({
-      SWAGGER_URL: "https://example.com/swagger.json",
       SWAGGER_REFRESH_INTERVAL_MS: "1000",
-      SWAGGER_REQUEST_TIMEOUT_MS: "2000"
-    });
+      NODE_ENV: "test"
+    } as NodeJS.ProcessEnv);
 
-    expect(env.SWAGGER_URL).toBe("https://example.com/swagger.json");
     expect(env.SWAGGER_REFRESH_INTERVAL_MS).toBe(1000);
-    expect(env.SWAGGER_REQUEST_TIMEOUT_MS).toBe(2000);
   });
 
-  it("throws config error when SWAGGER_URL missing", () => {
-    expect(() => loadEnv({})).toThrow("CONFIG_ERROR");
+  it("uses default refresh interval when not provided", () => {
+    const env = loadEnv({ NODE_ENV: "test" } as NodeJS.ProcessEnv);
+    expect(env.SWAGGER_REFRESH_INTERVAL_MS).toBe(300_000);
+  });
+
+  it("throws config error when refresh interval is invalid", () => {
+    expect(() => loadEnv({ SWAGGER_REFRESH_INTERVAL_MS: "invalid", NODE_ENV: "test" } as NodeJS.ProcessEnv)).toThrow("CONFIG_ERROR");
   });
 });

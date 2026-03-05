@@ -6,12 +6,12 @@ export function registerSearchApisTool(server: McpServer, store: SwaggerStore): 
   server.registerTool(
     "search_apis",
     {
-      description: "Search APIs by keyword, tag, and HTTP method.",
+      description: "Search APIs by keyword, tag, HTTP method, and project. Use 'project' to search within a specific project (e.g., 'openapi', 'user-service').",
       inputSchema: SearchApisInputSchema.shape
     },
     async (args) => {
       const data = SearchApisOutputSchema.parse({
-        ...store.getMeta(),
+        ...store.getMeta(args.project),
         ...store.searchApis(args)
       });
 

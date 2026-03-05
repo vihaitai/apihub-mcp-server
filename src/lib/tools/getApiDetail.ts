@@ -6,13 +6,13 @@ export function registerGetApiDetailTool(server: McpServer, store: SwaggerStore)
   server.registerTool(
     "get_api_detail",
     {
-      description: "Get detailed API definition by operationId or method/path.",
+      description: "Get detailed API definition by operationId or method/path. Use 'project' to specify which project to search in (e.g., 'openapi', 'user-service').",
       inputSchema: GetApiDetailInputSchema.shape
     },
     async (args) => {
       try {
         const data = GetApiDetailOutputSchema.parse({
-          ...store.getMeta(),
+          ...store.getMeta(args.project),
           item: store.getApiDetail(args)
         });
         return asToolResult(data);

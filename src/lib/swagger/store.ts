@@ -7,6 +7,7 @@ import {
   SearchApisInputSchema
 } from "../schema/api";
 import { hashSpec, indexSwagger } from "./indexer";
+import { loadAllSpecs } from "./specsLoader";
 
 export class NotFoundError extends Error {
   constructor(message: string) {
@@ -16,17 +17,20 @@ export class NotFoundError extends Error {
 }
 
 type StoreConfig = {
-  swaggerUrl: string;
   refreshIntervalMs: number;
-  requestTimeoutMs: number;
+};
+
+type ProjectSpec = {
+  project: string;
+  details: ApiDetail[];
+  fetchedAt: string;
+  specVersionHash: string;
 };
 
 export class SwaggerStore {
   private readonly config: StoreConfig;
   private timer: NodeJS.Timeout | null = null;
-  private details: ApiDetail[] = [];
-  private fetchedAt = "";
-  private specVersionHash = "";
+  private projects: Map<string, ProjectSpec> = new Map();
 
   constructor(config: StoreConfig) {
     this.config = config;
@@ -36,7 +40,7 @@ export class SwaggerStore {
     await this.refresh();
     this.timer = setInterval(() => {
       void this.refresh().catch((error) => {
-        console.error("FETCH_ERROR: Failed to refresh swagger spec", error);
+        console.error("FETCH_ERROR: Failed to refresh swagger specs", error);
       });
     }, this.config.refreshIntervalMs);
   }
@@ -49,10 +53,35 @@ export class SwaggerStore {
   }
 
   async refresh(): Promise<void> {
-    const spec = await this.fetchSwaggerJson();
-    this.details = indexSwagger(spec);
-    this.fetchedAt = new Date().toISOString();
-    this.specVersionHash = hashSpec(spec);
+    const files = await this.loadLocalSpecs();
+    this.projects = new Map(files.map((f) => [f.project, f]));
+  }
+
+  private async loadLocalSpecs(): Promise<ProjectSpec[]> {
+    const specs = await loadAllSpecs();
+
+    return specs.map((spec) => ({
+      project: spec.project,
+      details: indexSwagger(spec.content, spec.project),
+      fetchedAt: new Date().toISOString(),
+      specVersionHash: hashSpec(spec.content)
+    }));
+  }
+
+  getProjects(): string[] {
+    return Array.from(this.projects.keys());
+  }
+
+  private getAllDetails(): ApiDetail[] {
+    return Array.from(this.projects.values()).flatMap((p) => p.details);
+  }
+
+  private getDetailsByProject(project?: string): ApiDetail[] {
+    if (!project) {
+      return this.getAllDetails();
+    }
+    const spec = this.projects.get(project);
+    return spec ? spec.details : [];
   }
 
   listApi(inputRaw: unknown): {
@@ -62,7 +91,7 @@ export class SwaggerStore {
     items: ApiSummary[];
   } {
     const input = ListApiInputSchema.parse(inputRaw ?? {});
-    let items = this.details;
+    let items = this.getDetailsByProject(input.project);
 
     if (input.tag) {
       items = items.filter((item) => item.tags.includes(input.tag as string));
@@ -87,7 +116,7 @@ export class SwaggerStore {
     const input = SearchApisInputSchema.parse(inputRaw ?? {});
     const query = input.query?.trim().toLowerCase();
 
-    let items = this.details;
+    let items = this.getDetailsByProject(input.project);
     if (input.tag) {
       items = items.filter((item) => item.tags.includes(input.tag as string));
     }
@@ -101,7 +130,8 @@ export class SwaggerStore {
           item.path.toLowerCase().includes(query) ||
           (item.summary?.toLowerCase().includes(query) ?? false) ||
           (item.description?.toLowerCase().includes(query) ?? false) ||
-          item.tags.some((tag) => tag.toLowerCase().includes(query))
+          item.tags.some((tag) => tag.toLowerCase().includes(query)) ||
+          item.project.toLowerCase().includes(query)
         );
       });
     }
@@ -114,14 +144,15 @@ export class SwaggerStore {
 
   getApiDetail(inputRaw: unknown): ApiDetail {
     const input = GetApiDetailInputSchema.parse(inputRaw ?? {});
-    const found =
-      input.operationId
-        ? this.details.find((item) => item.operationId === input.operationId)
-        : this.details.find(
-            (item) =>
-              item.method === (input.method as HttpMethod) &&
-              item.path === input.path
-          );
+    const items = this.getDetailsByProject(input.project);
+
+    const found = input.operationId
+      ? items.find((item) => item.operationId === input.operationId)
+      : items.find(
+          (item) =>
+            item.method === (input.method as HttpMethod) &&
+            item.path === input.path
+        );
 
     if (!found) {
       throw new NotFoundError("NOT_FOUND: API definition not found.");
@@ -129,33 +160,30 @@ export class SwaggerStore {
     return found;
   }
 
-  getMeta(): { sourceSwaggerUrl: string; fetchedAt: string; specVersionHash: string } {
-    return {
-      sourceSwaggerUrl: this.config.swaggerUrl,
-      fetchedAt: this.fetchedAt,
-      specVersionHash: this.specVersionHash
-    };
-  }
-
-  private async fetchSwaggerJson(): Promise<unknown> {
-    const abortController = new AbortController();
-    const timeout = setTimeout(() => abortController.abort(), this.config.requestTimeoutMs);
-
-    try {
-      const response = await fetch(this.config.swaggerUrl, {
-        method: "GET",
-        headers: { Accept: "application/json" },
-        signal: abortController.signal
-      });
-
-      if (!response.ok) {
-        throw new Error(`FETCH_ERROR: Received ${response.status} from SWAGGER_URL`);
-      }
-
-      return await response.json();
-    } finally {
-      clearTimeout(timeout);
+  getMeta(project?: string): { projects: string[]; fetchedAt: string; specVersionHash: string } {
+    if (project) {
+      const spec = this.projects.get(project);
+      return {
+        projects: project ? [project] : this.getProjects(),
+        fetchedAt: spec?.fetchedAt ?? new Date().toISOString(),
+        specVersionHash: spec?.specVersionHash ?? ""
+      };
     }
+
+    // 合并所有项目的 hash
+    const hashes = Array.from(this.projects.values())
+      .map((p) => p.specVersionHash)
+      .join("|");
+    const latestFetched = Array.from(this.projects.values())
+      .map((p) => p.fetchedAt)
+      .sort()
+      .pop() ?? new Date().toISOString();
+
+    return {
+      projects: this.getProjects(),
+      fetchedAt: latestFetched,
+      specVersionHash: hashSpec(hashes)
+    };
   }
 }
 
@@ -166,6 +194,7 @@ function toSummary(detail: ApiDetail): ApiSummary {
     path: detail.path,
     summary: detail.summary,
     description: detail.description,
-    tags: detail.tags
+    tags: detail.tags,
+    project: detail.project
   };
 }

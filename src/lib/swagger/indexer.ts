@@ -91,7 +91,7 @@ function parseParameters(pathItem: JsonRecord, operation: JsonRecord): ApiDetail
   });
 }
 
-export function indexSwagger(spec: unknown): ApiDetail[] {
+export function indexSwagger(spec: unknown, project: string): ApiDetail[] {
   const specRecord = asRecord(spec);
   const paths = asRecord(specRecord.paths);
 
@@ -119,6 +119,7 @@ export function indexSwagger(spec: unknown): ApiDetail[] {
         summary: typeof operation.summary === "string" ? operation.summary : undefined,
         description: typeof operation.description === "string" ? operation.description : undefined,
         tags: toStringArray(operation.tags),
+        project,
         parameters: parseParameters(pathItem, operation),
         requestBody: parseRequestBody(operation),
         responses: parseResponses(operation)

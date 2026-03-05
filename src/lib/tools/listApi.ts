@@ -6,12 +6,12 @@ export function registerListApiTool(server: McpServer, store: SwaggerStore): voi
   server.registerTool(
     "list_api",
     {
-      description: "List API summaries with pagination and optional filters.",
+      description: "List API summaries with pagination and optional filters. Use 'project' to filter by project name (e.g., 'openapi', 'user-service').",
       inputSchema: ListApiInputSchema.shape
     },
     async (args) => {
       const data = ListApiOutputSchema.parse({
-        ...store.getMeta(),
+        ...store.getMeta(args.project),
         ...store.listApi(args)
       });
       return asToolResult(data);
