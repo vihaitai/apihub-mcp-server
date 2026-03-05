@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SearchApisInputSchema, SearchApisOutputSchema } from "../schema/api";
 import { SwaggerStore } from "../swagger/store";
+import { logger } from "../utils/logger";
 
 export function registerSearchApisTool(server: McpServer, store: SwaggerStore): void {
   server.registerTool(
@@ -10,12 +11,27 @@ export function registerSearchApisTool(server: McpServer, store: SwaggerStore): 
       inputSchema: SearchApisInputSchema.shape
     },
     async (args) => {
-      const data = SearchApisOutputSchema.parse({
-        ...store.getMeta(args.project),
-        ...store.searchApis(args)
-      });
+      const startTime = Date.now();
+      logger.info("Tool", `search_apis 调用开始`, { args });
 
-      return asToolResult(data);
+      try {
+        const data = SearchApisOutputSchema.parse({
+          ...store.getMeta(args.project),
+          ...store.searchApis(args)
+        });
+
+        const duration = Date.now() - startTime;
+        logger.info("Tool", `search_apis 调用完成`, { duration: `${duration}ms`, total: data.total });
+
+        return asToolResult(data);
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        logger.error("Tool", `search_apis 调用失败`, {
+          duration: `${duration}ms`,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        throw error;
+      }
     }
   );
 }

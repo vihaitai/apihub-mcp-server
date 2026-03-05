@@ -6,6 +6,7 @@ import {
   ListApiInputSchema,
   SearchApisInputSchema
 } from "../schema/api";
+import { logger } from "../utils/logger";
 import { hashSpec, indexSwagger } from "./indexer";
 import { loadAllSpecs } from "./specsLoader";
 
@@ -37,35 +38,65 @@ export class SwaggerStore {
   }
 
   async init(): Promise<void> {
+    logger.info("Store", `初始化 Store，刷新间隔: ${this.config.refreshIntervalMs}ms`);
     await this.refresh();
     this.timer = setInterval(() => {
       void this.refresh().catch((error) => {
-        console.error("FETCH_ERROR: Failed to refresh swagger specs", error);
+        logger.error("Store", `定时刷新失败`, {
+          error: error instanceof Error ? error.message : String(error)
+        });
       });
     }, this.config.refreshIntervalMs);
+    logger.info("Store", `Store 初始化完成`);
   }
 
   close(): void {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
+      logger.info("Store", `Store 已关闭`);
     }
   }
 
   async refresh(): Promise<void> {
-    const files = await this.loadLocalSpecs();
-    this.projects = new Map(files.map((f) => [f.project, f]));
+    logger.info("Store", `开始刷新 Swagger 文档`);
+    const startTime = Date.now();
+
+    try {
+      const files = await this.loadLocalSpecs();
+      this.projects = new Map(files.map((f) => [f.project, f]));
+
+      const duration = Date.now() - startTime;
+      const totalApis = files.reduce((sum, f) => sum + f.details.length, 0);
+
+      logger.info("Store", `刷新完成`, {
+        duration: `${duration}ms`,
+        projects: files.map((f) => f.project),
+        totalProjects: files.length,
+        totalApis
+      });
+    } catch (error) {
+      logger.error("Store", `刷新失败`, {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
   }
 
   private async loadLocalSpecs(): Promise<ProjectSpec[]> {
+    logger.debug("Store", `开始加载本地 specs`);
     const specs = await loadAllSpecs();
+    logger.debug("Store", `加载到 ${specs.length} 个 spec 文件`);
 
-    return specs.map((spec) => ({
-      project: spec.project,
-      details: indexSwagger(spec.content, spec.project),
-      fetchedAt: new Date().toISOString(),
-      specVersionHash: hashSpec(spec.content)
-    }));
+    return specs.map((spec) => {
+      logger.debug("Store", `解析项目`, { project: spec.project, title: spec.title });
+      return {
+        project: spec.project,
+        details: indexSwagger(spec.content, spec.project),
+        fetchedAt: new Date().toISOString(),
+        specVersionHash: hashSpec(spec.content)
+      };
+    });
   }
 
   getProjects(): string[] {
@@ -91,18 +122,30 @@ export class SwaggerStore {
     items: ApiSummary[];
   } {
     const input = ListApiInputSchema.parse(inputRaw ?? {});
+    logger.debug("Store", `listApi 调用`, { input });
+
     let items = this.getDetailsByProject(input.project);
+    logger.debug("Store", `项目过滤前`, { project: input.project, count: items.length });
 
     if (input.tag) {
       items = items.filter((item) => item.tags.includes(input.tag as string));
+      logger.debug("Store", `标签过滤后`, { tag: input.tag, count: items.length });
     }
     if (input.method) {
       items = items.filter((item) => item.method === input.method);
+      logger.debug("Store", `方法过滤后`, { method: input.method, count: items.length });
     }
 
     const total = items.length;
     const offset = (input.page - 1) * input.pageSize;
     const paged = items.slice(offset, offset + input.pageSize).map(toSummary);
+
+    logger.info("Store", `listApi 结果`, {
+      total,
+      page: input.page,
+      pageSize: input.pageSize,
+      returned: paged.length
+    });
 
     return {
       total,
@@ -114,16 +157,22 @@ export class SwaggerStore {
 
   searchApis(inputRaw: unknown): { total: number; items: ApiSummary[] } {
     const input = SearchApisInputSchema.parse(inputRaw ?? {});
-    const query = input.query?.trim().toLowerCase();
+    logger.debug("Store", `searchApis 调用`, { input });
 
+    const query = input.query?.trim().toLowerCase();
     let items = this.getDetailsByProject(input.project);
+    logger.debug("Store", `项目过滤前`, { project: input.project, count: items.length });
+
     if (input.tag) {
       items = items.filter((item) => item.tags.includes(input.tag as string));
+      logger.debug("Store", `标签过滤后`, { tag: input.tag, count: items.length });
     }
     if (input.method) {
       items = items.filter((item) => item.method === input.method);
+      logger.debug("Store", `方法过滤后`, { method: input.method, count: items.length });
     }
     if (query) {
+      const beforeCount = items.length;
       items = items.filter((item) => {
         return (
           item.operationId.toLowerCase().includes(query) ||
@@ -134,17 +183,28 @@ export class SwaggerStore {
           item.project.toLowerCase().includes(query)
         );
       });
+      logger.debug("Store", `关键词过滤后`, { query, beforeCount, afterCount: items.length });
     }
+
+    const result = items.slice(0, input.limit).map(toSummary);
+    logger.info("Store", `searchApis 结果`, {
+      total: items.length,
+      limit: input.limit,
+      returned: result.length
+    });
 
     return {
       total: items.length,
-      items: items.slice(0, input.limit).map(toSummary)
+      items: result
     };
   }
 
   getApiDetail(inputRaw: unknown): ApiDetail {
     const input = GetApiDetailInputSchema.parse(inputRaw ?? {});
+    logger.debug("Store", `getApiDetail 调用`, { input });
+
     const items = this.getDetailsByProject(input.project);
+    logger.debug("Store", `项目范围内搜索`, { project: input.project, count: items.length });
 
     const found = input.operationId
       ? items.find((item) => item.operationId === input.operationId)
@@ -155,8 +215,22 @@ export class SwaggerStore {
         );
 
     if (!found) {
+      logger.warn("Store", `API 未找到`, {
+        project: input.project,
+        operationId: input.operationId,
+        method: input.method,
+        path: input.path
+      });
       throw new NotFoundError("NOT_FOUND: API definition not found.");
     }
+
+    logger.info("Store", `API 详情已返回`, {
+      project: found.project,
+      operationId: found.operationId,
+      method: found.method,
+      path: found.path
+    });
+
     return found;
   }
 
