@@ -7,7 +7,19 @@ export function registerListApiTool(server: McpServer, store: SwaggerStore): voi
   server.registerTool(
     "list_api",
     {
-      description: "List API summaries with pagination and optional filters. Use 'project' to filter by project name (e.g., 'openapi', 'user-service').",
+      description: `List API summaries with pagination and optional filters.
+
+Input Schema:
+- project (string, optional): Filter by project name (e.g., 'AI客服系统API'). Get available projects from the 'projects' field in response.
+- page (number, optional): Page number, starts from 1, default is 1.
+- pageSize (number, optional): Items per page, range 1-200, default is 50.
+- tag (string, optional): Filter by API tag.
+- method (enum, optional): Filter by HTTP method. Allowed values: GET, POST, PUT, PATCH, DELETE.
+
+Usage Tips:
+1. First call without 'project' to get all available projects from the response.
+2. Then call with specific 'project' to list APIs within that project.
+3. Use 'tag' or 'method' to further filter results.`,
       inputSchema: ListApiInputSchema.shape
     },
     async (args) => {

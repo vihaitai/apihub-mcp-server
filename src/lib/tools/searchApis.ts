@@ -7,7 +7,19 @@ export function registerSearchApisTool(server: McpServer, store: SwaggerStore): 
   server.registerTool(
     "search_apis",
     {
-      description: "Search APIs by keyword, tag, HTTP method, and project. Use 'project' to search within a specific project (e.g., 'openapi', 'user-service').",
+      description: `Search APIs by keyword, tag, HTTP method, and project.
+
+Input Schema:
+- query (string, optional): Search keyword to filter APIs by operationId, path, summary, description, tags, or project name.
+- project (string, optional): Filter by project name (e.g., 'AI客服系统API'). Get available projects from list_api response.
+- tag (string, optional): Filter by API tag.
+- method (enum, optional): Filter by HTTP method. Allowed values: GET, POST, PUT, PATCH, DELETE.
+- limit (number, optional): Maximum number of results to return, range 1-100, default is 20.
+
+Usage Tips:
+1. Use 'query' for full-text search across operationId, path, summary, and description.
+2. Combine 'query' with 'project' to search within a specific project.
+3. Use 'tag' or 'method' to narrow down results further.`,
       inputSchema: SearchApisInputSchema.shape
     },
     async (args) => {

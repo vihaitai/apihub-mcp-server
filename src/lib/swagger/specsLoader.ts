@@ -68,12 +68,12 @@ export async function loadAllSpecs(): Promise<SpecInfo[]> {
       const fileContent = await readFile(join(SPECS_DIR, filename), "utf-8");
       const parsed = JSON.parse(fileContent);
       const info = parsed?.info ?? {};
-      const project = filename.replace(/\.json$/, "");
+      const title = typeof info.title === "string" ? info.title : filename;
 
       specs.push({
         filename,
-        project,
-        title: typeof info.title === "string" ? info.title : filename,
+        project: title,
+        title,
         version: typeof info.version === "string" ? info.version : "",
         description: typeof info.description === "string" ? info.description : "",
         url: `/specs/${filename}`,

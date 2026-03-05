@@ -39,14 +39,13 @@ export const ApiDetailSchema = ApiSummarySchema.extend({
 });
 
 export const BaseMetadataSchema = z.object({
-  sourceSwaggerUrl: z.string(),
   fetchedAt: z.string(),
   specVersionHash: z.string()
 });
 
 export const ListApiInputSchema = z.object({
-  page: z.number().int().positive().default(1),
-  pageSize: z.number().int().positive().max(200).default(50),
+  page: z.number().int().default(1).transform((v) => (v < 1 ? 1 : v)),
+  pageSize: z.number().int().max(200).default(50).transform((v) => (v < 1 ? 50 : v > 200 ? 200 : v)),
   tag: z.string().min(1).optional(),
   method: HttpMethodSchema.optional(),
   project: z.string().min(1).optional()

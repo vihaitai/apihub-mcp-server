@@ -7,7 +7,18 @@ export function registerGetApiDetailTool(server: McpServer, store: SwaggerStore)
   server.registerTool(
     "get_api_detail",
     {
-      description: "Get detailed API definition by operationId or method/path. Use 'project' to specify which project to search in (e.g., 'openapi', 'user-service').",
+      description: `Get detailed API definition by operationId or method/path.
+
+Input Schema (provide either operationId OR method+path):
+- operationId (string, optional): The unique identifier of the API operation. Preferred way to get API details.
+- method (enum, optional): HTTP method. Allowed values: GET, POST, PUT, PATCH, DELETE. Required if operationId is not provided.
+- path (string, optional): API path (e.g., '/api/users'). Required if operationId is not provided.
+- project (string, optional): Filter by project name (e.g., 'AI客服系统API'). Get available projects from list_api response.
+
+Usage Tips:
+1. Use 'operationId' for precise lookup when you know the exact operation identifier.
+2. Use 'method' + 'path' when operationId is unknown.
+3. Specify 'project' to narrow down the search scope and improve performance.`,
       inputSchema: GetApiDetailInputSchema.shape
     },
     async (args) => {
