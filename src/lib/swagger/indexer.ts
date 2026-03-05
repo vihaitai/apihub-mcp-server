@@ -20,10 +20,22 @@ function parseRequestBody(operation: JsonRecord): ApiDetail["requestBody"] {
   const requestBody = asRecord(operation.requestBody);
   if (Object.keys(requestBody).length > 0) {
     const content = asRecord(requestBody.content);
+    const contentInfo: Record<string, { schema?: Record<string, unknown> }> = {};
+    
+    // 提取每个 content-type 的完整 schema 信息
+    for (const [contentType, contentValue] of Object.entries(content)) {
+      const contentObj = asRecord(contentValue);
+      const schema = asRecord(contentObj.schema);
+      if (Object.keys(schema).length > 0) {
+        contentInfo[contentType] = { schema };
+      }
+    }
+    
     return {
       required: Boolean(requestBody.required),
       description: typeof requestBody.description === "string" ? requestBody.description : undefined,
-      contentTypes: Object.keys(content)
+      contentTypes: Object.keys(content),
+      content: Object.keys(contentInfo).length > 0 ? contentInfo : undefined
     };
   }
 
@@ -51,10 +63,22 @@ function parseResponses(operation: JsonRecord): ApiDetail["responses"] {
   return Object.entries(responses).map(([statusCode, raw]) => {
     const record = asRecord(raw);
     const content = asRecord(record.content);
+    const contentInfo: Record<string, { schema?: Record<string, unknown> }> = {};
+    
+    // 提取每个 content-type 的完整 schema 信息
+    for (const [contentType, contentValue] of Object.entries(content)) {
+      const contentObj = asRecord(contentValue);
+      const schema = asRecord(contentObj.schema);
+      if (Object.keys(schema).length > 0) {
+        contentInfo[contentType] = { schema };
+      }
+    }
+    
     return {
       statusCode,
       description: typeof record.description === "string" ? record.description : undefined,
-      contentTypes: Object.keys(content)
+      contentTypes: Object.keys(content),
+      content: Object.keys(contentInfo).length > 0 ? contentInfo : undefined
     };
   });
 }
