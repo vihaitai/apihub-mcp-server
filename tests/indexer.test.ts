@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hashSpec, indexSwagger } from "../src/swagger/indexer.js";
+import { hashSpec, indexSwagger } from "../src/lib/swagger/indexer";
 
 const spec = {
   swagger: "2.0",

@@ -1,0 +1,25 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { SwaggerStore } from "../swagger/store";
+import { registerGetApiDetailTool } from "../tools/getApiDetail";
+import { registerListApiTool } from "../tools/listApi";
+import { registerSearchApisTool } from "../tools/searchApis";
+
+export function createApiMcpServer(store: SwaggerStore): McpServer {
+  const server = new McpServer(
+    {
+      name: "apihub-mcp-server",
+      version: "1.0.0"
+    },
+    {
+      capabilities: {
+        logging: {}
+      }
+    }
+  );
+
+  registerListApiTool(server, store);
+  registerSearchApisTool(server, store);
+  registerGetApiDetailTool(server, store);
+
+  return server;
+}

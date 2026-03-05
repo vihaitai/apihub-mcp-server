@@ -1,0 +1,323 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "AI客服系统API",
+    "description": "AI客服系统的核心接口定义",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/aicall",
+      "description": "本地开发服务器"
+    }
+  ],
+  "paths": {
+    "/api/deal/speechToText": {
+      "post": {
+        "summary": "语音转文字",
+        "description": "将音频文件转换为文字",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "音频文件，wav格式"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string",
+                      "description": "识别结果文本"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deal/textToSpeech": {
+      "get": {
+        "summary": "文字转语音",
+        "description": "将文字转换为音频",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "要转换的文本"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversation/chat": {
+      "post": {
+        "summary": "AI对话",
+        "description": "与AI进行对话交互",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "conversation": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "salesman"
+                          ],
+                          "description": "角色"
+                        },
+                        "content": {
+                          "type": "string",
+                          "description": "内容"
+                        }
+                      }
+                    },
+                    "description": "对话历史"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "分类"
+                  },
+                  "sub_category": {
+                    "type": "string",
+                    "description": "子分类"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "response_msg": {
+                          "type": "object",
+                          "properties": {
+                            "answer": {
+                              "type": "string",
+                              "description": "AI回复内容"
+                            },
+                            "is_end": {
+                              "type": "boolean",
+                              "description": "是否结束对话"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/conversation/report": {
+      "post": {
+        "summary": "生成对话报告",
+        "description": "根据对话历史生成报告",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "conversation": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "salesman"
+                          ],
+                          "description": "角色"
+                        },
+                        "content": {
+                          "type": "string",
+                          "description": "内容"
+                        }
+                      }
+                    },
+                    "description": "对话历史"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "分类"
+                  },
+                  "sub_category": {
+                    "type": "string",
+                    "description": "子分类"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "report_msg": {
+                          "type": "object",
+                          "properties": {
+                            "summary": {
+                              "type": "object",
+                              "properties": {
+                                "对话主题": {
+                                  "oneOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  ],
+                                  "description": "对话的主题"
+                                },
+                                "客户态度": {
+                                  "oneOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  ],
+                                  "description": "客户的态度"
+                                },
+                                "客户需求": {
+                                  "oneOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  ],
+                                  "description": "客户的需求"
+                                },
+                                "推销要点": {
+                                  "oneOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  ],
+                                  "description": "推销的要点",
+                                  "nullable": true
+                                },
+                                "对话结果": {
+                                  "oneOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string"
+                                      }
+                                    }
+                                  ],
+                                  "description": "对话的结果"
+                                },
+                                "关键对话": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "关键对话内容",
+                                  "nullable": true
+                                }
+                              },
+                              "description": "报告摘要内容"
+                            }
+                          },
+                          "description": "报告消息"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

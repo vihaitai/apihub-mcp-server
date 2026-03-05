@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { NotFoundError, SwaggerStore } from "../src/swagger/store.js";
+import { NotFoundError, SwaggerStore } from "../src/lib/swagger/store";
 
 const spec = {
   openapi: "3.0.0",
